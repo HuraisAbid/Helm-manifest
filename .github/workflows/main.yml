@@ -58,7 +58,7 @@ jobs:
         id: fe-build
         run: |
           sudo apt-get update && sudo apt-get install -y jq curl
-          # Get latest numeric tag from Docker Hub
+          # Get latest numeric tag from Docker Hub (like 1.0, 2.0, etc.)
           LATEST_TAG=$(curl -s https://hub.docker.com/v2/repositories/abidhurais/helm-manifest-frontend/tags?page_size=100 \
                        | jq -r '.results[].name' | grep -E '^[0-9]+\.0$' | sort -V | tail -1)
           if [ -z "$LATEST_TAG" ]; then
@@ -80,7 +80,6 @@ jobs:
 
       - name: Deploy Frontend
         run: |
-          # Dynamically update tag in values.yaml
           sed -i "s/frontendTag:.*/frontendTag: \"${{ steps.fe-build.outputs.tag }}\"/" helm/myapp/values.yaml
           helm upgrade --install myapp helm/myapp -n devops-app
 
@@ -143,6 +142,5 @@ jobs:
 
       - name: Deploy Backend
         run: |
-          # Dynamically update tag in values.yaml
           sed -i "s/backendTag:.*/backendTag: \"${{ steps.be-build.outputs.tag }}\"/" helm/myapp/values.yaml
           helm upgrade --install myapp helm/myapp -n devops-app
