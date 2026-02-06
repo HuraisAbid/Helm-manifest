@@ -29,6 +29,7 @@ jobs:
           else
             echo "Frontend changed"
             echo "changed=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Detect backend changes
         id: backend-check
@@ -39,6 +40,7 @@ jobs:
           else
             echo "Backend changed"
             echo "changed=true" >> $GITHUB_OUTPUT
+          fi
 
   # ----------------------------
   # 2️⃣ Frontend pipeline
