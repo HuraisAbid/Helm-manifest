@@ -7,15 +7,17 @@ RUN rm -f /etc/nginx/conf.d/default.conf
 RUN addgroup -g 1001 nginxgroup \
  && adduser -D -u 1001 -G nginxgroup nginxuser
 
-# Create all directories NGINX could write to
+# Create all possible NGINX writable dirs and mark them writable by the non-root user
 RUN mkdir -p /var/cache/nginx/client_temp \
- && mkdir -p /var/cache/nginx/proxy_temp \
- && mkdir -p /var/cache/nginx/fastcgi_temp \
- && mkdir -p /var/cache/nginx/uwsgi_temp \
- && mkdir -p /var/cache/nginx/scgi_temp \
- && mkdir -p /var/run \
- && chown -R nginxuser:nginxgroup /var/cache/nginx /var/run /usr/share/nginx/html /etc/nginx \
- && chmod -R 755 /var/cache/nginx /var/run /usr/share/nginx/html /etc/nginx
+             /var/cache/nginx/proxy_temp \
+             /var/cache/nginx/fastcgi_temp \
+             /var/cache/nginx/uwsgi_temp \
+             /var/cache/nginx/scgi_temp \
+             /var/run/nginx \
+             /usr/share/nginx/html \
+             /etc/nginx \
+    && chown -R nginxuser:nginxgroup /var/cache/nginx /var/run/nginx /usr/share/nginx/html /etc/nginx \
+    && chmod -R 755 /var/cache/nginx /var/run/nginx /usr/share/nginx/html /etc/nginx
 
 # Copy your files
 COPY nginx.conf /etc/nginx/nginx.conf
