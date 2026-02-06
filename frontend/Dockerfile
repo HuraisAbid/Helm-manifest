@@ -7,21 +7,10 @@ RUN rm /etc/nginx/conf.d/default.conf
 RUN addgroup -g 1001 nginxgroup \
  && adduser -D -u 1001 -G nginxgroup nginxuser
 
-# Create all required directories and set permissions
-RUN mkdir -p \
-      /var/cache/nginx \
-      /var/run/nginx \
-      /var/log/nginx \
-      /usr/share/nginx/html \
-      /usr/share/nginx/html/assets \
-      /etc/nginx/conf.d \
- && chown -R nginxuser:nginxgroup \
-      /var/cache/nginx \
-      /var/run/nginx \
-      /var/log/nginx \
-      /usr/share/nginx/html \
-      /usr/share/nginx/html/assets \
-      /etc/nginx
+# Create required NGINX writable directories
+RUN mkdir -p /var/cache/nginx/client_temp \
+ && mkdir -p /var/run \
+ && chown -R nginxuser:nginxgroup /var/cache/nginx /var/run /usr/share/nginx/html /etc/nginx
 
 # Copy files
 COPY nginx.conf /etc/nginx/nginx.conf
