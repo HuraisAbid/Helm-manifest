@@ -9,7 +9,7 @@ namespace: devops-app
 frontend:
   image:
     repository: abidhurais/helm-manifest-frontend
-    tag: "0.0.0"   # 🔥 CI/CD pipeline updates this dynamically
+    tag: "0.0.0"   # 🔥 CI/CD pipeline dynamically replaces this with the next numeric version
   port: 8080
   replicas: 1
 
@@ -18,8 +18,8 @@ frontend:
 # ----------------------------
 backend:
   image:
-    repository: abidhurais/helm-manifest
-    tag: "0.0.0"   # 🔥 CI/CD pipeline updates this dynamically
+    repository: abidhurais/helm-manifest-backend
+    tag: "0.0.0"   # 🔥 CI/CD pipeline dynamically replaces this with the next numeric version
   port: 3000
   replicas: 1
 
@@ -48,7 +48,7 @@ resources:
 # ----------------------------
 ingress:
   enabled: true
-  host: ""       # Leave empty for testing, set your domain for production
+  host: ""       # Leave empty for testing; set your domain for production
 
 # ----------------------------
 # Horizontal Pod Autoscaler (HPA)
