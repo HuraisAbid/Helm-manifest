@@ -1,0 +1,170 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  # ----------------------------
+  # 1️⃣ Detect which service changed
+  # ----------------------------
+  detect-changes:
+    runs-on: self-hosted
+    outputs:
+      frontend-changed: ${{ steps.frontend-check.outputs.changed }}
+      backend-changed: ${{ steps.backend-check.outputs.changed }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Detect frontend changes
+        id: frontend-check
+        run: |
+          if git diff --quiet origin/main...HEAD -- frontend/; then
+            echo "No frontend changes"
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Frontend changed"
+            echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Detect backend changes
+        id: backend-check
+        run: |
+          if git diff --quiet origin/main...HEAD -- backend/; then
+            echo "No backend changes"
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Backend changed"
+            echo "changed=true" >> $GITHUB_OUTPUT
+
+  # ----------------------------
+  # 2️⃣ Frontend pipeline
+  # ----------------------------
+  frontend:
+    runs-on: self-hosted
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend-changed == 'true'
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - name: SonarQube Scan (Frontend)
+        if: always()
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          cd frontend
+          sonar-scanner \
+            -Dsonar.projectKey=frontend \
+            -Dsonar.host.url=$SONAR_HOST_URL \
+            -Dsonar.login=$SONAR_TOKEN
+
+      - name: Build Docker image for frontend
+        id: frontend-build
+        run: |
+          cd frontend
+          # Semantic versioning: use timestamp (can also integrate git tags)
+          VERSION=$(date +%Y.%m.%d.%H%M%S)
+          echo "Dynamic tag: $VERSION"
+          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+          docker build -t abidhurais/helm-manifest:$VERSION .
+
+      - name: Trivy Scan (Frontend)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image abidhurais/helm-manifest:${{ steps.frontend-build.outputs.tag }}
+
+      - name: Docker Login & Push (Frontend)
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+          docker push abidhurais/helm-manifest:${{ steps.frontend-build.outputs.tag }}
+
+      - name: Update Helm values.yaml (Frontend)
+        run: |
+          sed -i "s/tag: .*/tag: \"${{ steps.frontend-build.outputs.tag }}\"/" helm/myapp/values.yaml
+
+      - name: Deploy frontend via Helm
+        run: |
+          helm upgrade --install myapp helm/myapp --namespace devops-app
+
+  # ----------------------------
+  # 3️⃣ Backend pipeline
+  # ----------------------------
+  backend:
+    runs-on: self-hosted
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend-changed == 'true'
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm install
+
+      - name: SonarQube Scan (Backend)
+        if: always()
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          cd backend
+          sonar-scanner \
+            -Dsonar.projectKey=backend \
+            -Dsonar.host.url=$SONAR_HOST_URL \
+            -Dsonar.login=$SONAR_TOKEN
+
+      - name: Build Docker image for backend
+        id: backend-build
+        run: |
+          cd backend
+          VERSION=$(date +%Y.%m.%d.%H%M%S)
+          echo "Dynamic tag: $VERSION"
+          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+          docker build -t abidhurais/helm-manifest:$VERSION .
+
+      - name: Trivy Scan (Backend)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image abidhurais/helm-manifest:${{ steps.backend-build.outputs.tag }}
+
+      - name: Docker Login & Push (Backend)
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+          docker push abidhurais/helm-manifest:${{ steps.backend-build.outputs.tag }}
+
+      - name: Update Helm values.yaml (Backend)
+        run: |
+          sed -i "s/tag: .*/tag: \"${{ steps.backend-build.outputs.tag }}\"/" helm/myapp/values.yaml
+
+      - name: Deploy backend via Helm
+        run: |
+          helm upgrade --install myapp helm/myapp --namespace devops-app
