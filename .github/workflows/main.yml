@@ -5,9 +5,9 @@ on:
     branches:
       - main
 
-# ----------------------------------------
-# 1️⃣ Detect Changes
-# ----------------------------------------
+# =========================================================
+# 1️⃣ CHANGE DETECTION
+# =========================================================
 jobs:
   detect-changes:
     runs-on: self-hosted
@@ -15,7 +15,7 @@ jobs:
       frontend: ${{ steps.detect.outputs.frontend }}
       backend: ${{ steps.detect.outputs.backend }}
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
@@ -39,17 +39,26 @@ jobs:
             echo "backend=false" >> $GITHUB_OUTPUT
           fi
 
-# ----------------------------------------
-# 2️⃣ Frontend Pipeline (STATIC HTML + NGINX)
-# ----------------------------------------
+# =========================================================
+# 2️⃣ FRONTEND PIPELINE (STATIC HTML + NGINX)
+# =========================================================
   frontend:
     runs-on: self-hosted
     needs: detect-changes
     if: needs.detect-changes.outputs.frontend == 'true'
-    steps:
-      - uses: actions/checkout@v3
 
-      # 🔍 SonarQube Scan (HTML)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 🔧 REQUIRED for SonarQube 26+
+      - name: Setup Java 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # 🔍 SonarQube Scan (HTML only)
       - name: SonarQube Scan - Frontend
         env:
           SONAR_HOST_URL: ${{ secrets.SONAR_URL }}
@@ -60,10 +69,11 @@ jobs:
             -Dsonar.projectKey=frontend \
             -Dsonar.sources=. \
             -Dsonar.language=web \
+            -Dsonar.sourceEncoding=UTF-8 \
             -Dsonar.host.url=$SONAR_HOST_URL \
             -Dsonar.login=$SONAR_TOKEN
 
-      # 🐳 Docker Build
+      # 🐳 Build Docker Image (NGINX)
       - name: Build Frontend Image
         id: build
         run: |
@@ -88,30 +98,39 @@ jobs:
           echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
           docker push abidhurais/helm-manifest:${{ steps.build.outputs.tag }}
 
-      # 📝 Update Helm values
+      # 📝 Update Helm values.yaml
       - name: Update Helm Tag (Frontend)
         run: |
           sed -i "s|tag: \".*\"|tag: \"${{ steps.build.outputs.tag }}\"|" helm/myapp/values.yaml
 
-      # 🚀 Deploy
+      # 🚀 Deploy via Helm
       - name: Deploy Frontend
         run: |
           helm upgrade --install myapp helm/myapp -n devops-app
 
-# ----------------------------------------
-# 3️⃣ Backend Pipeline (Node.js + Redis)
-# ----------------------------------------
+# =========================================================
+# 3️⃣ BACKEND PIPELINE (NODE.JS + REDIS)
+# =========================================================
   backend:
     runs-on: self-hosted
     needs: detect-changes
     if: needs.detect-changes.outputs.backend == 'true'
+
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
+
+      # 🔧 REQUIRED for SonarQube 26+
+      - name: Setup Java 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
 
       - name: Install Backend Dependencies
         run: |
@@ -128,10 +147,11 @@ jobs:
           sonar-scanner \
             -Dsonar.projectKey=backend \
             -Dsonar.sources=. \
+            -Dsonar.sourceEncoding=UTF-8 \
             -Dsonar.host.url=$SONAR_HOST_URL \
             -Dsonar.login=$SONAR_TOKEN
 
-      # 🐳 Docker Build
+      # 🐳 Build Docker Image
       - name: Build Backend Image
         id: build
         run: |
@@ -156,12 +176,12 @@ jobs:
           echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
           docker push abidhurais/helm-manifest:${{ steps.build.outputs.tag }}
 
-      # 📝 Update Helm values
+      # 📝 Update Helm values.yaml
       - name: Update Helm Tag (Backend)
         run: |
           sed -i "s|tag: \".*\"|tag: \"${{ steps.build.outputs.tag }}\"|" helm/myapp/values.yaml
 
-      # 🚀 Deploy
+      # 🚀 Deploy via Helm
       - name: Deploy Backend
         run: |
           helm upgrade --install myapp helm/myapp -n devops-app
