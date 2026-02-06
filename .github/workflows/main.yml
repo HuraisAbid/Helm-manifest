@@ -23,25 +23,21 @@ jobs:
       - name: Detect frontend changes
         id: frontend-check
         run: |
-          CHANGED_FILES=$(git diff --name-only $GITHUB_SHA $GITHUB_SHA~1)
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
           echo "Changed files: $CHANGED_FILES"
           if echo "$CHANGED_FILES" | grep -q "^frontend/"; then
-            echo "Frontend changed"
             echo "changed=true" >> $GITHUB_OUTPUT
           else
-            echo "No frontend changes"
             echo "changed=false" >> $GITHUB_OUTPUT
 
       - name: Detect backend changes
         id: backend-check
         run: |
-          CHANGED_FILES=$(git diff --name-only $GITHUB_SHA $GITHUB_SHA~1)
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
           echo "Changed files: $CHANGED_FILES"
           if echo "$CHANGED_FILES" | grep -q "^backend/"; then
-            echo "Backend changed"
             echo "changed=true" >> $GITHUB_OUTPUT
           else
-            echo "No backend changes"
             echo "changed=false" >> $GITHUB_OUTPUT
 
   # ----------------------------
@@ -86,7 +82,6 @@ jobs:
             -Dsonar.login=$SONAR_TOKEN
 
       - name: Build Docker image for frontend
-        id: frontend-build
         run: |
           cd frontend
           docker build -t abidhurais/helm-manifest-frontend:${{ steps.frontend-tag.outputs.tag }} .
@@ -153,7 +148,6 @@ jobs:
             -Dsonar.login=$SONAR_TOKEN
 
       - name: Build Docker image for backend
-        id: backend-build
         run: |
           cd backend
           docker build -t abidhurais/helm-manifest-backend:${{ steps.backend-tag.outputs.tag }} .
