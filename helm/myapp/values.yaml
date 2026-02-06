@@ -1,0 +1,33 @@
+namespace: devops-app
+
+frontend:
+  image:
+    repository: abidhurais/helm-manifest
+    tag: "0.0.0"   # 🔥 pipeline updates this
+  port: 8080
+  replicas: 1
+
+backend:
+  image:
+    repository: abidhurais/helm-manifest
+    tag: "0.0.0"   # 🔥 pipeline updates this
+  port: 3000
+  replicas: 1
+
+redis:
+  image:
+    repository: redis
+    tag: "7-alpine"
+  password: redis123
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "200m"
+    memory: "256Mi"
+
+ingress:
+  enabled: true
+
