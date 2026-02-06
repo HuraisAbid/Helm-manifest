@@ -40,7 +40,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # 🔥 NO npm install (STATIC SITE)
       - name: SonarQube Scan - Frontend
         env:
           SONAR_HOST_URL: ${{ secrets.SONAR_URL }}
@@ -54,20 +53,23 @@ jobs:
             -Dsonar.projectKey=frontend \
             -Dsonar.sources=. \
             -Dsonar.sourceEncoding=UTF-8
+
       - name: Build Frontend Image
         id: fe-build
         run: |
           # ----------------------------
-          # Incremental numeric tag (2 digits)
+          # Semantic numeric tag
           # ----------------------------
-          LAST_TAG=$(docker images abidhurais/helm-manifest-frontend --format "{{.Tag}}" | sort -n | tail -1)
-          if [ -z "$LAST_TAG" ]; then
+          LATEST_TAG=$(curl -s https://hub.docker.com/v2/repositories/abidhurais/helm-manifest-frontend/tags?page_size=100 \
+                        | jq -r '.results[].name' | grep -E '^[0-9]+$' | sort -n | tail -1)
+          if [ -z "$LATEST_TAG" ]; then
             VERSION=1
           else
-            VERSION=$((LAST_TAG + 1))
+            VERSION=$((LATEST_TAG + 1))
           fi
           echo "tag=$VERSION" >> $GITHUB_OUTPUT
           docker build -t abidhurais/helm-manifest-frontend:$VERSION frontend
+
       - name: Push Frontend Image
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
@@ -75,6 +77,7 @@ jobs:
         run: |
           echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
           docker push abidhurais/helm-manifest-frontend:${{ steps.fe-build.outputs.tag }}
+
       - name: Deploy Frontend
         run: |
           sed -i "s/frontendTag:.*/frontendTag: \"${{ steps.fe-build.outputs.tag }}\"/" helm/myapp/values.yaml
@@ -98,6 +101,7 @@ jobs:
         run: |
           cd backend
           npm install
+
       - name: SonarQube Scan - Backend
         env:
           SONAR_HOST_URL: ${{ secrets.SONAR_URL }}
@@ -111,20 +115,23 @@ jobs:
             -Dsonar.projectKey=backend \
             -Dsonar.sources=. \
             -Dsonar.sourceEncoding=UTF-8
+
       - name: Build Backend Image
         id: be-build
         run: |
           # ----------------------------
-          # Incremental numeric tag (2 digits)
+          # Semantic numeric tag
           # ----------------------------
-          LAST_TAG=$(docker images abidhurais/helm-manifest-backend --format "{{.Tag}}" | sort -n | tail -1)
-          if [ -z "$LAST_TAG" ]; then
+          LATEST_TAG=$(curl -s https://hub.docker.com/v2/repositories/abidhurais/helm-manifest-backend/tags?page_size=100 \
+                        | jq -r '.results[].name' | grep -E '^[0-9]+$' | sort -n | tail -1)
+          if [ -z "$LATEST_TAG" ]; then
             VERSION=1
           else
-            VERSION=$((LAST_TAG + 1))
+            VERSION=$((LATEST_TAG + 1))
           fi
           echo "tag=$VERSION" >> $GITHUB_OUTPUT
           docker build -t abidhurais/helm-manifest-backend:$VERSION backend
+
       - name: Push Backend Image
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
@@ -132,6 +139,7 @@ jobs:
         run: |
           echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
           docker push abidhurais/helm-manifest-backend:${{ steps.be-build.outputs.tag }}
+
       - name: Deploy Backend
         run: |
           sed -i "s/backendTag:.*/backendTag: \"${{ steps.be-build.outputs.tag }}\"/" helm/myapp/values.yaml
