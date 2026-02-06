@@ -7,7 +7,7 @@ RUN rm -f /etc/nginx/conf.d/default.conf
 RUN addgroup -g 1001 nginxgroup \
  && adduser -D -u 1001 -G nginxgroup nginxuser
 
-# Create all possible NGINX writable dirs and mark them writable by the non-root user
+# Create all writable dirs
 RUN mkdir -p /var/cache/nginx/client_temp \
              /var/cache/nginx/proxy_temp \
              /var/cache/nginx/fastcgi_temp \
@@ -19,7 +19,7 @@ RUN mkdir -p /var/cache/nginx/client_temp \
     && chown -R nginxuser:nginxgroup /var/cache/nginx /var/run/nginx /usr/share/nginx/html /etc/nginx \
     && chmod -R 755 /var/cache/nginx /var/run/nginx /usr/share/nginx/html /etc/nginx
 
-# Copy your files
+# Copy files
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY index.html /usr/share/nginx/html/index.html
 
@@ -28,6 +28,8 @@ USER nginxuser
 
 EXPOSE 8080
 
+# Healthcheck
 HEALTHCHECK CMD wget -qO- http://localhost:8080/health || exit 1
 
-CMD ["nginx", "-g", "daemon off;"]
+# Run nginx with custom PID inside a writable directory
+CMD ["nginx", "-g", "pid /var/run/nginx/nginx.pid; daemon off;"]
