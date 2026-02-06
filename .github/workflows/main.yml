@@ -23,23 +23,28 @@ jobs:
       - name: Detect frontend changes
         id: frontend-check
         run: |
-          if git diff --quiet origin/main...HEAD -- frontend/; then
-            echo "No frontend changes"
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
+          # Get the list of files changed in this push
+          CHANGED_FILES=$(git diff --name-only $GITHUB_SHA $GITHUB_SHA~1)
+          echo "Changed files: $CHANGED_FILES"
+          if echo "$CHANGED_FILES" | grep -q "^frontend/"; then
             echo "Frontend changed"
             echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "No frontend changes"
+            echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Detect backend changes
         id: backend-check
         run: |
-          if git diff --quiet origin/main...HEAD -- backend/; then
-            echo "No backend changes"
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
+          CHANGED_FILES=$(git diff --name-only $GITHUB_SHA $GITHUB_SHA~1)
+          echo "Changed files: $CHANGED_FILES"
+          if echo "$CHANGED_FILES" | grep -q "^backend/"; then
             echo "Backend changed"
             echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "No backend changes"
+            echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
   # ----------------------------
