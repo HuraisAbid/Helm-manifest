@@ -31,7 +31,7 @@ jobs:
             || echo "changed=false" >> $GITHUB_OUTPUT
 
 # ----------------------------------
-# 2️⃣ Frontend Pipeline (STATIC)
+# 2️⃣ Frontend Pipeline
 # ----------------------------------
   frontend:
     runs-on: self-hosted
@@ -57,16 +57,15 @@ jobs:
       - name: Build Frontend Image
         id: fe-build
         run: |
-          # ----------------------------
-          # Semantic numeric tag from Docker Hub
-          # ----------------------------
           sudo apt-get update && sudo apt-get install -y jq curl
+          # Get latest numeric tag from Docker Hub (like 1.0, 2.0, etc.)
           LATEST_TAG=$(curl -s https://hub.docker.com/v2/repositories/abidhurais/helm-manifest-frontend/tags?page_size=100 \
-                       | jq -r '.results[].name' | grep -E '^[0-9]+$' | sort -n | tail -1)
+                       | jq -r '.results[].name' | grep -E '^[0-9]+\.0$' | sort -V | tail -1)
           if [ -z "$LATEST_TAG" ]; then
-            VERSION=1
+            VERSION="1.0"
           else
-            VERSION=$((LATEST_TAG + 1))
+            MAJOR=$(echo $LATEST_TAG | cut -d'.' -f1)
+            VERSION="$((MAJOR + 1)).0"
           fi
           echo "tag=$VERSION" >> $GITHUB_OUTPUT
           docker build -t abidhurais/helm-manifest-frontend:$VERSION frontend
@@ -85,7 +84,7 @@ jobs:
           helm upgrade --install myapp helm/myapp -n devops-app
 
 # ----------------------------------
-# 3️⃣ Backend Pipeline (Node.js)
+# 3️⃣ Backend Pipeline
 # ----------------------------------
   backend:
     runs-on: self-hosted
@@ -120,16 +119,15 @@ jobs:
       - name: Build Backend Image
         id: be-build
         run: |
-          # ----------------------------
-          # Semantic numeric tag from Docker Hub
-          # ----------------------------
           sudo apt-get update && sudo apt-get install -y jq curl
+          # Get latest numeric tag from Docker Hub
           LATEST_TAG=$(curl -s https://hub.docker.com/v2/repositories/abidhurais/helm-manifest-backend/tags?page_size=100 \
-                       | jq -r '.results[].name' | grep -E '^[0-9]+$' | sort -n | tail -1)
+                       | jq -r '.results[].name' | grep -E '^[0-9]+\.0$' | sort -V | tail -1)
           if [ -z "$LATEST_TAG" ]; then
-            VERSION=1
+            VERSION="1.0"
           else
-            VERSION=$((LATEST_TAG + 1))
+            MAJOR=$(echo $LATEST_TAG | cut -d'.' -f1)
+            VERSION="$((MAJOR + 1)).0"
           fi
           echo "tag=$VERSION" >> $GITHUB_OUTPUT
           docker build -t abidhurais/helm-manifest-backend:$VERSION backend
