@@ -6,184 +6,133 @@ on:
       - main
 
 jobs:
-  # ----------------------------
-  # 1️⃣ Detect which service changed
-  # ----------------------------
+# ----------------------------------
+# 1️⃣ Detect Changes
+# ----------------------------------
   detect-changes:
     runs-on: self-hosted
     outputs:
-      frontend-changed: ${{ steps.frontend-check.outputs.changed }}
-      backend-changed: ${{ steps.backend-check.outputs.changed }}
+      frontend: ${{ steps.frontend.outputs.changed }}
+      backend: ${{ steps.backend.outputs.changed }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Detect frontend changes
-        id: frontend-check
+      - id: frontend
         run: |
-          CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
-          echo "Changed files: $CHANGED_FILES"
-          if echo "$CHANGED_FILES" | grep -q "^frontend/"; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Detect backend changes
-        id: backend-check
+          git diff --name-only HEAD~1 HEAD | grep '^frontend/' \
+            && echo "changed=true" >> $GITHUB_OUTPUT \
+            || echo "changed=false" >> $GITHUB_OUTPUT
+      - id: backend
         run: |
-          CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
-          echo "Changed files: $CHANGED_FILES"
-          if echo "$CHANGED_FILES" | grep -q "^backend/"; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
+          git diff --name-only HEAD~1 HEAD | grep '^backend/' \
+            && echo "changed=true" >> $GITHUB_OUTPUT \
+            || echo "changed=false" >> $GITHUB_OUTPUT
 
-  # ----------------------------
-  # 2️⃣ Frontend pipeline
-  # ----------------------------
+# ----------------------------------
+# 2️⃣ Frontend Pipeline (STATIC)
+# ----------------------------------
   frontend:
     runs-on: self-hosted
     needs: detect-changes
-    if: needs.detect-changes.outputs.frontend-changed == 'true'
+    if: needs.detect-changes.outputs.frontend == 'true'
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-
-      - name: Increment frontend tag
-        id: frontend-tag
-        run: |
-          if [ -f frontend/.tag ]; then
-            LAST_TAG=$(cat frontend/.tag)
-            NEW_TAG=$((LAST_TAG + 1))
-          else
-            NEW_TAG=1
-          fi
-          echo $NEW_TAG > frontend/.tag
-          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
-
-      - name: SonarQube Scan (Frontend)
+      # 🔥 NO npm install (STATIC SITE)
+      - name: SonarQube Scan - Frontend
         env:
           SONAR_HOST_URL: ${{ secrets.SONAR_URL }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          cd frontend
-          sonar-scanner \
+          docker run --rm \
+            -e SONAR_HOST_URL=$SONAR_HOST_URL \
+            -e SONAR_TOKEN=$SONAR_TOKEN \
+            -v "$PWD/frontend:/usr/src" \
+            sonarsource/sonar-scanner-cli:latest \
             -Dsonar.projectKey=frontend \
-            -Dsonar.host.url=$SONAR_HOST_URL \
-            -Dsonar.login=$SONAR_TOKEN
-
-      - name: Build Docker image for frontend
+            -Dsonar.sources=. \
+            -Dsonar.sourceEncoding=UTF-8
+      - name: Build Frontend Image
+        id: fe-build
         run: |
-          cd frontend
-          docker build -t abidhurais/helm-manifest-frontend:${{ steps.frontend-tag.outputs.tag }} .
-
-      - name: Trivy Scan (Frontend)
-        run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image abidhurais/helm-manifest-frontend:${{ steps.frontend-tag.outputs.tag }}
-
-      - name: Docker Login & Push (Frontend)
+          # ----------------------------
+          # Incremental numeric tag (2 digits)
+          # ----------------------------
+          LAST_TAG=$(docker images abidhurais/helm-manifest-frontend --format "{{.Tag}}" | sort -n | tail -1)
+          if [ -z "$LAST_TAG" ]; then
+            VERSION=1
+          else
+            VERSION=$((LAST_TAG + 1))
+          fi
+          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+          docker build -t abidhurais/helm-manifest-frontend:$VERSION frontend
+      - name: Push Frontend Image
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
           echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-          docker push abidhurais/helm-manifest-frontend:${{ steps.frontend-tag.outputs.tag }}
-
-      - name: Update Helm values.yaml (Frontend)
+          docker push abidhurais/helm-manifest-frontend:${{ steps.fe-build.outputs.tag }}
+      - name: Deploy Frontend
         run: |
-          sed -i "s/frontendTag:.*/frontendTag: \"${{ steps.frontend-tag.outputs.tag }}\"/" helm/myapp/values.yaml
+          sed -i "s/frontendTag:.*/frontendTag: \"${{ steps.fe-build.outputs.tag }}\"/" helm/myapp/values.yaml
+          helm upgrade --install myapp helm/myapp -n devops-app
 
-      - name: Deploy frontend via Helm
-        run: |
-          helm upgrade --install myapp helm/myapp --namespace devops-app --create-namespace
-
-  # ----------------------------
-  # 3️⃣ Backend pipeline
-  # ----------------------------
+# ----------------------------------
+# 3️⃣ Backend Pipeline (Node.js)
+# ----------------------------------
   backend:
     runs-on: self-hosted
     needs: detect-changes
-    if: needs.detect-changes.outputs.backend-changed == 'true'
+    if: needs.detect-changes.outputs.backend == 'true'
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      - name: Increment backend tag
-        id: backend-tag
+      - name: Install Backend Deps
         run: |
-          if [ -f backend/.tag ]; then
-            LAST_TAG=$(cat backend/.tag)
-            NEW_TAG=$((LAST_TAG + 1))
-          else
-            NEW_TAG=1
-          fi
-          echo $NEW_TAG > backend/.tag
-          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
-
-      - name: SonarQube Scan (Backend)
+          cd backend
+          npm install
+      - name: SonarQube Scan - Backend
         env:
           SONAR_HOST_URL: ${{ secrets.SONAR_URL }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          cd backend
-          sonar-scanner \
+          docker run --rm \
+            -e SONAR_HOST_URL=$SONAR_HOST_URL \
+            -e SONAR_TOKEN=$SONAR_TOKEN \
+            -v "$PWD/backend:/usr/src" \
+            sonarsource/sonar-scanner-cli:latest \
             -Dsonar.projectKey=backend \
-            -Dsonar.host.url=$SONAR_HOST_URL \
-            -Dsonar.login=$SONAR_TOKEN
-
-      - name: Build Docker image for backend
+            -Dsonar.sources=. \
+            -Dsonar.sourceEncoding=UTF-8
+      - name: Build Backend Image
+        id: be-build
         run: |
-          cd backend
-          docker build -t abidhurais/helm-manifest-backend:${{ steps.backend-tag.outputs.tag }} .
-
-      - name: Trivy Scan (Backend)
-        run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image abidhurais/helm-manifest-backend:${{ steps.backend-tag.outputs.tag }}
-
-      - name: Docker Login & Push (Backend)
+          # ----------------------------
+          # Incremental numeric tag (2 digits)
+          # ----------------------------
+          LAST_TAG=$(docker images abidhurais/helm-manifest-backend --format "{{.Tag}}" | sort -n | tail -1)
+          if [ -z "$LAST_TAG" ]; then
+            VERSION=1
+          else
+            VERSION=$((LAST_TAG + 1))
+          fi
+          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+          docker build -t abidhurais/helm-manifest-backend:$VERSION backend
+      - name: Push Backend Image
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
           echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-          docker push abidhurais/helm-manifest-backend:${{ steps.backend-tag.outputs.tag }}
-
-      - name: Update Helm values.yaml (Backend)
+          docker push abidhurais/helm-manifest-backend:${{ steps.be-build.outputs.tag }}
+      - name: Deploy Backend
         run: |
-          sed -i "s/backendTag:.*/backendTag: \"${{ steps.backend-tag.outputs.tag }}\"/" helm/myapp/values.yaml
-
-      - name: Deploy backend via Helm
-        run: |
-          helm upgrade --install myapp helm/myapp --namespace devops-app --create-namespace
-
-  # ----------------------------
-  # 4️⃣ Deploy Redis (always)
-  # ----------------------------
-  redis:
-    runs-on: self-hosted
-    needs: [frontend, backend]
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Deploy Redis via Helm
-        run: |
-          helm upgrade --install myapp helm/myapp --namespace devops-app --create-namespace
+          sed -i "s/backendTag:.*/backendTag: \"${{ steps.be-build.outputs.tag }}\"/" helm/myapp/values.yaml
+          helm upgrade --install myapp helm/myapp -n devops-app
