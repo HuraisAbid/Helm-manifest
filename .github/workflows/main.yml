@@ -58,10 +58,11 @@ jobs:
         id: fe-build
         run: |
           # ----------------------------
-          # Semantic numeric tag
+          # Semantic numeric tag from Docker Hub
           # ----------------------------
+          sudo apt-get update && sudo apt-get install -y jq curl
           LATEST_TAG=$(curl -s https://hub.docker.com/v2/repositories/abidhurais/helm-manifest-frontend/tags?page_size=100 \
-                        | jq -r '.results[].name' | grep -E '^[0-9]+$' | sort -n | tail -1)
+                       | jq -r '.results[].name' | grep -E '^[0-9]+$' | sort -n | tail -1)
           if [ -z "$LATEST_TAG" ]; then
             VERSION=1
           else
@@ -120,10 +121,11 @@ jobs:
         id: be-build
         run: |
           # ----------------------------
-          # Semantic numeric tag
+          # Semantic numeric tag from Docker Hub
           # ----------------------------
+          sudo apt-get update && sudo apt-get install -y jq curl
           LATEST_TAG=$(curl -s https://hub.docker.com/v2/repositories/abidhurais/helm-manifest-backend/tags?page_size=100 \
-                        | jq -r '.results[].name' | grep -E '^[0-9]+$' | sort -n | tail -1)
+                       | jq -r '.results[].name' | grep -E '^[0-9]+$' | sort -n | tail -1)
           if [ -z "$LATEST_TAG" ]; then
             VERSION=1
           else
