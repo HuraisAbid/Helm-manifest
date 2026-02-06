@@ -25,7 +25,7 @@ spec:
             httpGet:
               path: /health
               port: {{ .Values.frontend.port }}
-            initialDelaySeconds: 10   # give NGINX time to start
+            initialDelaySeconds: 10   # allow NGINX to start
             periodSeconds: 10
             timeoutSeconds: 2
             failureThreshold: 3
@@ -33,9 +33,19 @@ spec:
             httpGet:
               path: /health
               port: {{ .Values.frontend.port }}
-            initialDelaySeconds: 5    # delay before first probe
+            initialDelaySeconds: 5
             periodSeconds: 10
             timeoutSeconds: 2
             failureThreshold: 3
           resources:
 {{ toYaml .Values.resources | indent 12 }}
+          volumeMounts:
+            - name: nginx-runtime
+              mountPath: /var/run/nginx
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+      volumes:
+        - name: nginx-runtime
+          emptyDir: {}
+        - name: nginx-cache
+          emptyDir: {}
