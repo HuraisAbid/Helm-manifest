@@ -4,31 +4,52 @@ const redis = require("redis");
 const app = express();
 const PORT = 3000;
 
-// Redis connection
+// Create Redis client (DO NOT block startup)
 const redisClient = redis.createClient({
-  url: `redis://:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:6379`
+  url: `redis://:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:6379`,
+  socket: {
+    reconnectStrategy: retries => Math.min(retries * 100, 2000)
+  }
 });
 
-redisClient.connect().catch(console.error);
+redisClient.on("error", err => {
+  console.error("Redis error:", err.message);
+});
 
-// Health endpoint
+// Connect asynchronously
+(async () => {
+  try {
+    await redisClient.connect();
+    console.log("Connected to Redis");
+  } catch (err) {
+    console.error("Redis connection failed, retrying in background");
+  }
+})();
+
+// Health endpoint (DO NOT depend on Redis)
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "OK" });
 });
 
-// Redis test endpoint
+// API endpoint (Redis used only here)
 app.get("/api/time", async (req, res) => {
-  const now = new Date().toISOString();
-  await redisClient.set("last_time", now);
-  const value = await redisClient.get("last_time");
+  try {
+    const now = new Date().toISOString();
+    await redisClient.set("last_time", now);
+    const value = await redisClient.get("last_time");
 
-  res.json({
-    message: "Time stored in Redis",
-    time: value
-  });
+    res.json({
+      message: "Time stored in Redis",
+      time: value
+    });
+  } catch (err) {
+    res.status(503).json({
+      error: "Redis unavailable"
+    });
+  }
 });
 
+// 🔥 LISTEN ALWAYS
 app.listen(PORT, () => {
-  console.log(`Backend running on port 5 ${PORT}`);
+  console.log(`Backend running on port ${PORT}`);
 });
-
