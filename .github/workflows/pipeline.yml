@@ -68,7 +68,10 @@ jobs:
             VERSION="$((MAJOR + 1)).0"
           fi
           echo "tag=$VERSION" >> $GITHUB_OUTPUT
-          docker build -t abidhurais/helm-manifest-frontend:$VERSION frontend
+          docker build \
+          -t abidhurais/helm-manifest-frontend:$VERSION \
+          -t abidhurais/helm-manifest-frontend:latest \
+          frontend
 
       - name: Push Frontend Image
         env:
@@ -77,6 +80,7 @@ jobs:
         run: |
           echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
           docker push abidhurais/helm-manifest-frontend:${{ steps.fe-build.outputs.tag }}
+          docker push abidhurais/helm-manifest-frontend:latest
 
       - name: Deploy Frontend
         run: |
