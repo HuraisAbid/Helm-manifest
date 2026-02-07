@@ -16,6 +16,7 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
+        fsGroup: 1001
       containers:
         - name: frontend
           image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
@@ -25,7 +26,7 @@ spec:
             httpGet:
               path: /health
               port: {{ .Values.frontend.port }}
-            initialDelaySeconds: 10   # allow NGINX to start
+            initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 2
             failureThreshold: 3
