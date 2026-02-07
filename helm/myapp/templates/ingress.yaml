@@ -3,13 +3,10 @@ kind: Ingress
 metadata:
   name: app-ingress
   namespace: devops-app
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   ingressClassName: nginx
   rules:
-    - host: ""   # leave empty for IP access
-      http:
+    - http:
         paths:
           - path: /api
             pathType: Prefix
