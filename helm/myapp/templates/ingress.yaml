@@ -4,7 +4,7 @@ metadata:
   name: app-ingress
   namespace: {{ .Values.namespace }}
 spec:
-  ingressClassName: nginx   # <-- Add this line
+  ingressClassName: nginx
   rules:
     - http:
         paths:
@@ -14,7 +14,7 @@ spec:
               service:
                 name: frontend
                 port:
-                  number: 80
+                  number: 8080
           - path: /api
             pathType: Prefix
             backend:
