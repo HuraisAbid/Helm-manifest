@@ -2,6 +2,28 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  name: allow-backend-redis
+  namespace: {{ .Values.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: backend
+      ports:
+        - protocol: TCP
+          port: 6379
+{{- end }}
+
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
   name: allow-frontend-backend
   namespace: {{ .Values.namespace }}
 spec:
@@ -13,8 +35,7 @@ spec:
   ingress:
     - from:
         - podSelector:
-            matchLabels:
-              app: frontend
+            app: frontend
       ports:
         - protocol: TCP
           port: {{ .Values.backend.port }}
