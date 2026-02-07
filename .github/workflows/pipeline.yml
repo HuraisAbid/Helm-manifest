@@ -134,7 +134,10 @@ jobs:
             VERSION="$((MAJOR + 1)).0"
           fi
           echo "tag=$VERSION" >> $GITHUB_OUTPUT
-          docker build -t abidhurais/helm-manifest-backend:$VERSION backend
+          docker build \
+          -t abidhurais/helm-manifest-backend:$VERSION \
+          -t abidhurais/helm-manifest-backend:latest \
+          backend
 
       - name: Push Backend Image
         env:
@@ -143,6 +146,7 @@ jobs:
         run: |
           echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
           docker push abidhurais/helm-manifest-backend:${{ steps.be-build.outputs.tag }}
+          docker push abidhurais/helm-manifest-backend:latest
 
       - name: Deploy Backend
         run: |
