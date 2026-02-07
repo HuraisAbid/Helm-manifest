@@ -51,5 +51,5 @@ app.get("/api/time", async (req, res) => {
 
 // 🔥 LISTEN ALWAYS
 app.listen(PORT, () => {
-  console.log(`Backend running on port ${PORT}`);
+  console.log(`Backend running on ports ${PORT}`);
 });
