@@ -1,3 +1,6 @@
+# ------------------------------
+# Frontend Service
+# ------------------------------
 apiVersion: v1
 kind: Service
 metadata:
@@ -9,10 +12,12 @@ spec:
   ports:
     - port: 8080
       targetPort: 8080
-  type: NodePort
+  type: NodePort  # optional for direct access
 
 ---
-
+# ------------------------------
+# Backend Service
+# ------------------------------
 apiVersion: v1
 kind: Service
 metadata:
@@ -23,12 +28,13 @@ spec:
     app: backend
   ports:
     - protocol: TCP
-      port: 80        # matches Ingress backend port
+      port: 80        # matches Ingress backend
       targetPort: 3000 # container port
-  type: NodePort
 
 ---
-
+# ------------------------------
+# Redis Service
+# ------------------------------
 apiVersion: v1
 kind: Service
 metadata:
