@@ -9,7 +9,7 @@ namespace: devops-app
 frontend:
   image:
     repository: abidhurais/helm-manifest-frontend
-    tag: "23.0"   # 🔥 CI/CD pipeline dynamically replaces this with the next numeric version
+    tag: "25.0"   # 🔥 CI/CD pipeline dynamically replaces this with the next numeric version
   port: 8080
   replicas: 1
 
