@@ -49,7 +49,7 @@ app.get("/api/time", async (req, res) => {
   }
 });
 
-// 🔥 LISTEN ALWAYS
-app.listen(PORT, () => {
-  console.log(`Backend running on portsss ${PORT}`);
+// 🔥 LISTEN ON ALL INTERFACES
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Backend running on port ${PORT} and listening on 0.0.0.0`);
 });
