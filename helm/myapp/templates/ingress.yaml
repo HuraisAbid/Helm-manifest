@@ -4,7 +4,7 @@ metadata:
   name: app-ingress
   namespace: {{ .Values.namespace }}
 spec:
-  ingressClassName: nginx
+  ingressClassName: nginx   # ensure NGINX controller is used
   rules:
     - http:
         paths:
