@@ -5,4 +5,3 @@ metadata:
   namespace: {{ .Values.namespace }}
 data:
   REDIS_HOST: redis
-
