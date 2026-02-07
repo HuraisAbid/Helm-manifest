@@ -13,14 +13,37 @@ spec:
       labels:
         app: redis
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
       containers:
         - name: redis
-          image: {{ .Values.redis.image }}
-          args: ["--requirepass", "$(REDIS_PASSWORD)"]
+          image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
+          args:
+            - "--requirepass"
+            - "$(REDIS_PASSWORD)"
           env:
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: redis-secret
                   key: REDIS_PASSWORD
-
+          ports:
+            - containerPort: 6379
+          livenessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
