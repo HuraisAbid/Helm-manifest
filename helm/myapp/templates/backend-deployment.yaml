@@ -21,14 +21,11 @@ spec:
           image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
           ports:
             - containerPort: {{ .Values.backend.port }}
-
           envFrom:
             - configMapRef:
                 name: backend-config
             - secretRef:
                 name: redis-secret
-
-          # 🔥 VERY IMPORTANT
           startupProbe:
             httpGet:
               path: /health
@@ -36,7 +33,6 @@ spec:
             initialDelaySeconds: 10
             failureThreshold: 30
             periodSeconds: 5
-
           readinessProbe:
             httpGet:
               path: /health
@@ -45,7 +41,6 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 2
             failureThreshold: 5
-
           livenessProbe:
             httpGet:
               path: /health
@@ -54,6 +49,5 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 2
             failureThreshold: 5
-
           resources:
 {{ toYaml .Values.resources | indent 12 }}
