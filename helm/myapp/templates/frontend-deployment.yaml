@@ -15,8 +15,8 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
-        runAsUser: 101  
-        fsGroup: 1001
+        runAsUser: 101
+        fsGroup: 101
       containers:
         - name: frontend
           image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
@@ -41,12 +41,12 @@ spec:
           resources:
 {{ toYaml .Values.resources | indent 12 }}
           volumeMounts:
-            - name: nginx-runtime
-              mountPath: /var/run/nginx
+            - name: nginx-run
+              mountPath: /var/run
             - name: nginx-cache
               mountPath: /var/cache/nginx
       volumes:
-        - name: nginx-runtime
+        - name: nginx-run
           emptyDir: {}
         - name: nginx-cache
           emptyDir: {}
