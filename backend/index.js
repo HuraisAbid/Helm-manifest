@@ -29,6 +29,6 @@ app.get("/api/time", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Backend running on port ${PORT}`);
+  console.log(`Backend running on port 1 ${PORT}`);
 });
 
