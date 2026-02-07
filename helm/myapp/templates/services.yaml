@@ -1,47 +1,41 @@
-# ------------------------------
 # Frontend Service
-# ------------------------------
 apiVersion: v1
 kind: Service
 metadata:
   name: frontend
-  namespace: {{ .Values.namespace }}
+  namespace: devops-app
 spec:
   selector:
     app: frontend
   ports:
     - port: 8080
       targetPort: 8080
-  type: NodePort  # optional for direct access
+  type: ClusterIP   # change NodePort -> ClusterIP
 
----
-# ------------------------------
 # Backend Service
-# ------------------------------
 apiVersion: v1
 kind: Service
 metadata:
   name: backend
-  namespace: {{ .Values.namespace }}
+  namespace: devops-app
 spec:
   selector:
     app: backend
   ports:
     - protocol: TCP
-      port: 80        # matches Ingress backend
-      targetPort: 3000 # container port
+      port: 80
+      targetPort: 3000
+  type: ClusterIP
 
----
-# ------------------------------
-# Redis Service
-# ------------------------------
+# Redis Service (unchanged)
 apiVersion: v1
 kind: Service
 metadata:
   name: redis
-  namespace: {{ .Values.namespace }}
+  namespace: devops-app
 spec:
   selector:
     app: redis
   ports:
     - port: 6379
+  type: ClusterIP
