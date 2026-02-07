@@ -26,13 +26,6 @@ spec:
                 name: backend-config
             - secretRef:
                 name: redis-secret
-          startupProbe:
-            httpGet:
-              path: /health
-              port: {{ .Values.backend.port }}
-            initialDelaySeconds: 10
-            failureThreshold: 30
-            periodSeconds: 5
           readinessProbe:
             httpGet:
               path: /health
@@ -49,5 +42,12 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 2
             failureThreshold: 5
+          startupProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.backend.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 30
           resources:
 {{ toYaml .Values.resources | indent 12 }}
