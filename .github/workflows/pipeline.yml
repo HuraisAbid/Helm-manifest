@@ -99,7 +99,7 @@ jobs:
 
           echo "tag=$VERSION" >> $GITHUB_OUTPUT
 
-          docker build \
+          docker build --network=host \
             -t abidhurais/helm-manifest-backend:$VERSION \
             -t abidhurais/helm-manifest-backend:latest \
             backend
