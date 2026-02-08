@@ -46,7 +46,22 @@ jobs:
     outputs:
       tag: ${{ steps.build.outputs.tag }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: SonarQube Scan Frontend
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          docker run --rm \
+            -e SONAR_HOST_URL=$SONAR_HOST_URL \
+            -e SONAR_TOKEN=$SONAR_TOKEN \
+            -v "$PWD/frontend:/usr/src" \
+            sonarsource/sonar-scanner-cli:latest \
+            -Dsonar.projectKey=frontend \
+            -Dsonar.sources=. \
+            -Dsonar.sourceEncoding=UTF-8
 
       - name: Build Frontend Image
         id: build
@@ -68,34 +83,6 @@ jobs:
             -t abidhurais/helm-manifest-frontend:latest \
             frontend
 
-# ----------------------------------
-# 3️⃣ SonarQube Frontend
-# ----------------------------------
-  sonar-frontend:
-    name: SonarQube Frontend Scan
-    runs-on: self-hosted
-    needs: build-frontend
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Run SonarQube Scan (Frontend)
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          sonar-scanner \
-            -Dsonar.projectKey=frontend \
-            -Dsonar.sources=frontend \
-            -Dsonar.host.url=http://sonarqube:9000 \
-            -Dsonar.login=$SONAR_TOKEN
-
-# ----------------------------------
-# 4️⃣ Trivy + Push Frontend
-# ----------------------------------
-  push-frontend:
-    name: Push Frontend Image
-    runs-on: self-hosted
-    needs: sonar-frontend
-    steps:
       - name: Trivy Scan Frontend Image
         run: |
           trivy image --severity HIGH,CRITICAL \
@@ -107,20 +94,23 @@ jobs:
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
           echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+          docker push abidhurais/helm-manifest-frontend:${{ steps.build.outputs.tag }}
           docker push abidhurais/helm-manifest-frontend:latest
 
 # ----------------------------------
-# 5️⃣ Deploy Frontend
+# 3️⃣ Deploy Frontend
 # ----------------------------------
   deploy-frontend:
     name: Deploy Frontend
     runs-on: self-hosted
-    needs: push-frontend
+    needs: build-frontend
     steps:
-      - run: helm upgrade --install myapp helm/myapp -n devops-app
+      - name: Deploy Frontend to Kubernetes
+        run: |
+          helm upgrade --install myapp helm/myapp -n devops-app
 
 # ----------------------------------
-# 6️⃣ Build Backend
+# 4️⃣ Build Backend
 # ----------------------------------
   build-backend:
     name: Build Backend
@@ -130,7 +120,22 @@ jobs:
     outputs:
       tag: ${{ steps.build.outputs.tag }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: SonarQube Scan Backend
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          docker run --rm \
+            -e SONAR_HOST_URL=$SONAR_HOST_URL \
+            -e SONAR_TOKEN=$SONAR_TOKEN \
+            -v "$PWD/backend:/usr/src" \
+            sonarsource/sonar-scanner-cli:latest \
+            -Dsonar.projectKey=backend \
+            -Dsonar.sources=. \
+            -Dsonar.sourceEncoding=UTF-8
 
       - name: Build Backend Image
         id: build
@@ -152,34 +157,6 @@ jobs:
             -t abidhurais/helm-manifest-backend:latest \
             backend
 
-# ----------------------------------
-# 7️⃣ SonarQube Backend
-# ----------------------------------
-  sonar-backend:
-    name: SonarQube Backend Scan
-    runs-on: self-hosted
-    needs: build-backend
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Run SonarQube Scan (Backend)
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          sonar-scanner \
-            -Dsonar.projectKey=backend \
-            -Dsonar.sources=backend \
-            -Dsonar.host.url=http://sonarqube:9000 \
-            -Dsonar.login=$SONAR_TOKEN
-
-# ----------------------------------
-# 8️⃣ Trivy + Push Backend
-# ----------------------------------
-  push-backend:
-    name: Push Backend Image
-    runs-on: self-hosted
-    needs: sonar-backend
-    steps:
       - name: Trivy Scan Backend Image
         run: |
           trivy image --severity HIGH,CRITICAL \
@@ -191,14 +168,17 @@ jobs:
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
           echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+          docker push abidhurais/helm-manifest-backend:${{ steps.build.outputs.tag }}
           docker push abidhurais/helm-manifest-backend:latest
 
 # ----------------------------------
-# 9️⃣ Deploy Backend
+# 5️⃣ Deploy Backend
 # ----------------------------------
   deploy-backend:
     name: Deploy Backend
     runs-on: self-hosted
-    needs: push-backend
+    needs: build-backend
     steps:
-      - run: helm upgrade --install myapp helm/myapp -n devops-app
+      - name: Deploy Backend to Kubernetes
+        run: |
+          helm upgrade --install myapp helm/myapp -n devops-app
