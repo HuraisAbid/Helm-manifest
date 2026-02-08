@@ -36,19 +36,21 @@ jobs:
             || echo "changed=false" >> $GITHUB_OUTPUT
 
 # ----------------------------------
-# 2️⃣ Frontend Pipeline
+# 2️⃣ Build Frontend
 # ----------------------------------
-  frontend:
-    name: Build & Deploy Frontend
+  build-frontend:
+    name: Build Frontend
     runs-on: self-hosted
     needs: detect-changes
     if: needs.detect-changes.outputs.frontend == 'true'
+    outputs:
+      tag: ${{ steps.build.outputs.tag }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
       - name: Build Frontend Image
-        id: fe-build
+        id: build
         run: |
           LATEST_TAG=$(curl -s https://hub.docker.com/v2/repositories/abidhurais/helm-manifest-frontend/tags?page_size=100 \
             | jq -r '.results[]?.name' | grep -E '^[0-9]+\.0$' | sort -V | tail -1)
@@ -78,27 +80,37 @@ jobs:
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
           echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-          docker push abidhurais/helm-manifest-frontend:${{ steps.fe-build.outputs.tag }}
+          docker push abidhurais/helm-manifest-frontend:${{ steps.build.outputs.tag }}
           docker push abidhurais/helm-manifest-frontend:latest
 
+# ----------------------------------
+# 3️⃣ Deploy Frontend
+# ----------------------------------
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: self-hosted
+    needs: build-frontend
+    steps:
       - name: Deploy Frontend to Kubernetes
         run: |
           helm upgrade --install myapp helm/myapp -n devops-app
 
 # ----------------------------------
-# 3️⃣ Backend Pipeline
+# 4️⃣ Build Backend
 # ----------------------------------
-  backend:
-    name: Build & Deploy Backend
+  build-backend:
+    name: Build Backend
     runs-on: self-hosted
     needs: detect-changes
     if: needs.detect-changes.outputs.backend == 'true'
+    outputs:
+      tag: ${{ steps.build.outputs.tag }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
       - name: Build Backend Image
-        id: be-build
+        id: build
         run: |
           LATEST_TAG=$(curl -s https://hub.docker.com/v2/repositories/abidhurais/helm-manifest-backend/tags?page_size=100 \
             | jq -r '.results[]?.name' | grep -E '^[0-9]+\.0$' | sort -V | tail -1)
@@ -128,9 +140,17 @@ jobs:
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
           echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-          docker push abidhurais/helm-manifest-backend:${{ steps.be-build.outputs.tag }}
+          docker push abidhurais/helm-manifest-backend:${{ steps.build.outputs.tag }}
           docker push abidhurais/helm-manifest-backend:latest
 
+# ----------------------------------
+# 5️⃣ Deploy Backend
+# ----------------------------------
+  deploy-backend:
+    name: Deploy Backend
+    runs-on: self-hosted
+    needs: build-backend
+    steps:
       - name: Deploy Backend to Kubernetes
         run: |
           helm upgrade --install myapp helm/myapp -n devops-app
