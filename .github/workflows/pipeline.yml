@@ -10,22 +10,26 @@ jobs:
 # 1️⃣ Detect Changes
 # ----------------------------------
   detect-changes:
+    name: Detect Changes
     runs-on: self-hosted
     outputs:
       frontend: ${{ steps.frontend.outputs.changed }}
       backend: ${{ steps.backend.outputs.changed }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - id: frontend
+      - name: Detect Frontend Changes
+        id: frontend
         run: |
           git diff --name-only HEAD~1 HEAD | grep '^frontend/' \
             && echo "changed=true" >> $GITHUB_OUTPUT \
             || echo "changed=false" >> $GITHUB_OUTPUT
 
-      - id: backend
+      - name: Detect Backend Changes
+        id: backend
         run: |
           git diff --name-only HEAD~1 HEAD | grep '^backend/' \
             && echo "changed=true" >> $GITHUB_OUTPUT \
@@ -35,11 +39,13 @@ jobs:
 # 2️⃣ Frontend Pipeline
 # ----------------------------------
   frontend:
+    name: Build & Deploy Frontend
     runs-on: self-hosted
     needs: detect-changes
     if: needs.detect-changes.outputs.frontend == 'true'
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
       - name: Build Frontend Image
         id: fe-build
@@ -61,6 +67,11 @@ jobs:
             -t abidhurais/helm-manifest-frontend:latest \
             frontend
 
+      - name: Trivy Scan Frontend Image
+        run: |
+          trivy image --severity HIGH,CRITICAL \
+            abidhurais/helm-manifest-frontend:latest
+
       - name: Push Frontend Image
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
@@ -70,7 +81,7 @@ jobs:
           docker push abidhurais/helm-manifest-frontend:${{ steps.fe-build.outputs.tag }}
           docker push abidhurais/helm-manifest-frontend:latest
 
-      - name: Deploy Frontend
+      - name: Deploy Frontend to Kubernetes
         run: |
           helm upgrade --install myapp helm/myapp -n devops-app
 
@@ -78,11 +89,13 @@ jobs:
 # 3️⃣ Backend Pipeline
 # ----------------------------------
   backend:
+    name: Build & Deploy Backend
     runs-on: self-hosted
     needs: detect-changes
     if: needs.detect-changes.outputs.backend == 'true'
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
       - name: Build Backend Image
         id: be-build
@@ -104,6 +117,11 @@ jobs:
             -t abidhurais/helm-manifest-backend:latest \
             backend
 
+      - name: Trivy Scan Backend Image
+        run: |
+          trivy image --severity HIGH,CRITICAL \
+            abidhurais/helm-manifest-backend:latest
+
       - name: Push Backend Image
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
@@ -113,6 +131,6 @@ jobs:
           docker push abidhurais/helm-manifest-backend:${{ steps.be-build.outputs.tag }}
           docker push abidhurais/helm-manifest-backend:latest
 
-      - name: Deploy Backend
+      - name: Deploy Backend to Kubernetes
         run: |
           helm upgrade --install myapp helm/myapp -n devops-app
