@@ -1,15 +1,17 @@
-# DevOps Take-Home Assignment: Kubernetes & CI/CD Pipeline
+# Kubernetes & CI/CD Pipeline
 
 ## Project Links
 
-- GitHub Repository: [https://github.com/yourusername/devops-assignment](https://github.com/yourusername/devops-assignment)
-- Live Application (via NGINX Ingress): [http://your-ingress-url](http://your-ingress-url)
+- GitHub Repository: [https://github.com/HuraisAbid/Helm-manifest.git](https://github.com/HuraisAbid/Helm-manifest.git)
+- Live Application (via NGINX Ingress): (http://192.168.188.129:31923/)
 - Docker Hub Images:
   - Frontend: [https://hub.docker.com/r/abidhurais/helm-manifest-frontend](https://hub.docker.com/r/abidhurais/helm-manifest-frontend)
   - Backend: [https://hub.docker.com/r/abidhurais/helm-manifest-backend](https://hub.docker.com/r/abidhurais/helm-manifest-backend)
-- CI/CD Pipeline (GitHub Actions): [https://github.com/yourusername/devops-assignment/actions](https://github.com/yourusername/devops-assignment/actions)
+- CI/CD Pipeline (GitHub Actions): [https://github.com/HuraisAbid/Helm-manifest.git/actions](https://github.com/HuraisAbid/Helm-manifest.git/actions)
+- SonarQube On-Prem URL: [http://192.168.188.128:9000/projects](http://192.168.188.128:9000/projects)
 
 ---
+
 
 ## Overview
 
