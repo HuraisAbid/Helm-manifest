@@ -46,8 +46,7 @@ jobs:
     outputs:
       tag: ${{ steps.build.outputs.tag }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Build Frontend Image
         id: build
@@ -69,6 +68,34 @@ jobs:
             -t abidhurais/helm-manifest-frontend:latest \
             frontend
 
+# ----------------------------------
+# 3️⃣ SonarQube Frontend
+# ----------------------------------
+  sonar-frontend:
+    name: SonarQube Frontend Scan
+    runs-on: self-hosted
+    needs: build-frontend
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run SonarQube Scan (Frontend)
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          sonar-scanner \
+            -Dsonar.projectKey=frontend \
+            -Dsonar.sources=frontend \
+            -Dsonar.host.url=http://sonarqube:9000 \
+            -Dsonar.login=$SONAR_TOKEN
+
+# ----------------------------------
+# 4️⃣ Trivy + Push Frontend
+# ----------------------------------
+  push-frontend:
+    name: Push Frontend Image
+    runs-on: self-hosted
+    needs: sonar-frontend
+    steps:
       - name: Trivy Scan Frontend Image
         run: |
           trivy image --severity HIGH,CRITICAL \
@@ -80,23 +107,20 @@ jobs:
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
           echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-          docker push abidhurais/helm-manifest-frontend:${{ steps.build.outputs.tag }}
           docker push abidhurais/helm-manifest-frontend:latest
 
 # ----------------------------------
-# 3️⃣ Deploy Frontend
+# 5️⃣ Deploy Frontend
 # ----------------------------------
   deploy-frontend:
     name: Deploy Frontend
     runs-on: self-hosted
-    needs: build-frontend
+    needs: push-frontend
     steps:
-      - name: Deploy Frontend to Kubernetes
-        run: |
-          helm upgrade --install myapp helm/myapp -n devops-app
+      - run: helm upgrade --install myapp helm/myapp -n devops-app
 
 # ----------------------------------
-# 4️⃣ Build Backend
+# 6️⃣ Build Backend
 # ----------------------------------
   build-backend:
     name: Build Backend
@@ -106,8 +130,7 @@ jobs:
     outputs:
       tag: ${{ steps.build.outputs.tag }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Build Backend Image
         id: build
@@ -129,6 +152,34 @@ jobs:
             -t abidhurais/helm-manifest-backend:latest \
             backend
 
+# ----------------------------------
+# 7️⃣ SonarQube Backend
+# ----------------------------------
+  sonar-backend:
+    name: SonarQube Backend Scan
+    runs-on: self-hosted
+    needs: build-backend
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run SonarQube Scan (Backend)
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          sonar-scanner \
+            -Dsonar.projectKey=backend \
+            -Dsonar.sources=backend \
+            -Dsonar.host.url=http://sonarqube:9000 \
+            -Dsonar.login=$SONAR_TOKEN
+
+# ----------------------------------
+# 8️⃣ Trivy + Push Backend
+# ----------------------------------
+  push-backend:
+    name: Push Backend Image
+    runs-on: self-hosted
+    needs: sonar-backend
+    steps:
       - name: Trivy Scan Backend Image
         run: |
           trivy image --severity HIGH,CRITICAL \
@@ -140,17 +191,14 @@ jobs:
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
           echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-          docker push abidhurais/helm-manifest-backend:${{ steps.build.outputs.tag }}
           docker push abidhurais/helm-manifest-backend:latest
 
 # ----------------------------------
-# 5️⃣ Deploy Backend
+# 9️⃣ Deploy Backend
 # ----------------------------------
   deploy-backend:
     name: Deploy Backend
     runs-on: self-hosted
-    needs: build-backend
+    needs: push-backend
     steps:
-      - name: Deploy Backend to Kubernetes
-        run: |
-          helm upgrade --install myapp helm/myapp -n devops-app
+      - run: helm upgrade --install myapp helm/myapp -n devops-app
