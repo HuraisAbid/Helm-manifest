@@ -7,7 +7,6 @@
 - Docker Hub Images:
   - Frontend: [https://hub.docker.com/r/abidhurais/helm-manifest-frontend](https://hub.docker.com/r/abidhurais/helm-manifest-frontend)
   - Backend: [https://hub.docker.com/r/abidhurais/helm-manifest-backend](https://hub.docker.com/r/abidhurais/helm-manifest-backend)
-- CI/CD Pipeline (GitHub Actions): [https://github.com/HuraisAbid/Helm-manifest.git/actions](https://github.com/HuraisAbid/Helm-manifest.git/actions)
 - SonarQube On-Prem URL: [http://192.168.188.128:9000/projects](http://192.168.188.128:9000/projects)
 
 ---
@@ -67,4 +66,77 @@ This project demonstrates a complete **end-to-end DevOps workflow**, including:
 ---
 
 ### Phase 2 — Repository Structure
+project/
+├─ frontend/
+├─ backend/
+├─ k8s/
+├─ helm/
+├─ .github/workflows/
+├─ docs/
+└─ README.md
+
+---
+
+### Phase 3 — Dockerfile Creation & Docker Hub Setup
+
+- **Frontend**: NGINX, non-root user, healthchecks, small image  
+- **Backend**: Node.js, non-root, Redis integration, healthchecks  
+- **Redis**: Alpine-based, password-protected  
+- Push images to Docker Hub with semantic versioning (`x.0`)  
+
+---
+
+### Phase 4 — SonarQube Setup (On-Prem)
+
+- SonarQube runs on VM  
+- Code quality scanned before building Docker image  
+- Secrets stored securely via GitHub Secrets  
+
+---
+
+### Phase 5 — GitHub Actions & CI/CD Pipeline
+
+#### Pipeline Overview
+
+- **Change Detection**: Only services that changed are built/tested  
+- **SonarQube Scan**: Quality checks using secrets from GitHub  
+- **Docker Build**: Semantic versioning and `latest` tag  
+- **Trivy Scan**: Detect vulnerabilities before pushing  
+- **Push to Docker Hub**  
+- **Deploy to Kubernetes via Helm**  
+- **Access via Ingress**  
+
+#### Workflow Example
+
+1. **Change Detection**:  
+   Detect whether frontend or backend code changed using `git diff`  
+
+2. **Docker Build & SonarQube**:  
+   Build Docker image and scan code with SonarQube for quality gates  
+
+3. **Trivy Scan**:  
+   Scan images for vulnerabilities  
+
+4. **Push to Docker Hub**:  
+   Push image tags (`semantic version` and `latest`)  
+
+5. **Deployment**:  
+   Deploy updated service to Kubernetes using Helm  
+
+---
+
+## Future Goals
+
+- Migrate pipeline to **Azure DevOps**  
+- Use **Azure Container Registry (ACR)** for image storage  
+- Deploy Kubernetes workloads on **AKS**  
+
+---
+
+## License
+
+This project is for **educational purposes**.  
+
+---
+
 
