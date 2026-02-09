@@ -1,28 +1,40 @@
-
+# ----------------------------
+# Namespace
+# ----------------------------
 namespace: devops-app
 
-
+# ----------------------------
+# Frontend configuration
+# ----------------------------
 frontend:
   image:
     repository: abidhurais/helm-manifest-frontend
-    tag: "latest"   
+    tag: "latest"   # 🔥 CI/CD pipeline dynamically replaces this with the next numeric version
   port: 8080
   replicas: 1
 
-
+# ----------------------------
+# Backend configuration
+# ----------------------------
 backend:
   image:
     repository: abidhurais/helm-manifest-backend
-    tag: "latest"  
+    tag: "latest"   # 🔥 CI/CD pipeline dynamically replaces this with the next numeric version
+  port: 3000
   replicas: 1
 
+# ----------------------------
+# Redis configuration
+# ----------------------------
 redis:
   image:
     repository: redis
     tag: "7-alpine"
   password: redis123
 
-
+# ----------------------------
+# Resource requests & limits
+# ----------------------------
 resources:
   requests:
     cpu: "100m"
@@ -31,11 +43,16 @@ resources:
     cpu: "200m"
     memory: "256Mi"
 
-
+# ----------------------------
+# Ingress
+# ----------------------------
 ingress:
   enabled: true
-  host: ""       
+  host: ""       # Leave empty for testing; set your domain for production
 
+# ----------------------------
+# Horizontal Pod Autoscaler (HPA)
+# ----------------------------
 hpa:
   enabled: true
   frontend:
@@ -47,7 +64,9 @@ hpa:
     maxReplicas: 2
     cpuThreshold: 50
 
+# ----------------------------
+# Network Policy
+# ----------------------------
 networkPolicy:
   enabled: true
   allowFrontendToBackend: true
-  allowBackendToRedis: true
