@@ -3,12 +3,10 @@ name: CI/CD Pipeline
 on:
   push:
     branches:
-      - maind
+      - main
 
 jobs:
-# ----------------------------------
-# 1️⃣ Detect Changes
-# ----------------------------------
+
   detect-changes:
     name: Detect Changes
     runs-on: self-hosted
@@ -35,9 +33,7 @@ jobs:
             && echo "changed=true" >> $GITHUB_OUTPUT \
             || echo "changed=false" >> $GITHUB_OUTPUT
 
-# ----------------------------------
-# 2️⃣ Build Frontend
-# ----------------------------------
+
   build-frontend:
     name: Build Frontend
     runs-on: self-hosted
@@ -97,9 +93,6 @@ jobs:
           docker push abidhurais/helm-manifest-frontend:${{ steps.build.outputs.tag }}
           docker push abidhurais/helm-manifest-frontend:latest
 
-# ----------------------------------
-# 3️⃣ Deploy Frontend
-# ----------------------------------
   deploy-frontend:
     name: Deploy Frontend
     runs-on: self-hosted
@@ -109,9 +102,7 @@ jobs:
         run: |
           helm upgrade --install myapp helm/myapp -n devops-app
 
-# ----------------------------------
-# 4️⃣ Build Backend
-# ----------------------------------
+
   build-backend:
     name: Build Backend
     runs-on: self-hosted
@@ -171,9 +162,7 @@ jobs:
           docker push abidhurais/helm-manifest-backend:${{ steps.build.outputs.tag }}
           docker push abidhurais/helm-manifest-backend:latest
 
-# ----------------------------------
-# 5️⃣ Deploy Backend
-# ----------------------------------
+
   deploy-backend:
     name: Deploy Backend
     runs-on: self-hosted
